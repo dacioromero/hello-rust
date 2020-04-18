@@ -1,34 +1,65 @@
 use std::collections::HashMap;
 use std::sync::RwLock;
 
-#[derive(juniper::GraphQLObject, Clone)]
-struct Item {
-    id: String,
-    name: String,
-    done: bool
+macro_rules! get_write_lock {
+    ($x:expr) => {
+        $x.write().expect("Failed to get write lock")
+    };
+}
+
+macro_rules! get_read_lock {
+    ($x:expr) => {
+        $x.read().expect("Failed to get read lock")
+    };
+}
+
+macro_rules! item_not_exist {
+    ($getter:expr) => {
+        $getter.expect("Item {} doesn't exist")
+    };
 }
 
 pub struct Context {
-    item_map: RwLock<HashMap<String, Item>>
+    item_map: RwLock<HashMap<String, Item>>,
 }
 
-pub fn create_context () -> Context {
+impl juniper::Context for Context {}
+
+pub fn create_context() -> Context {
     let item_map = RwLock::new(HashMap::new());
 
     Context { item_map }
 }
 
-impl juniper::Context for Context {}
+#[derive(juniper::GraphQLObject, Clone)]
+struct Item {
+    id: String,
+    name: String,
+    done: bool,
+}
+
+#[derive(juniper::GraphQLEnum)]
+enum ItemState {
+    Doing = 0,
+    Done = 1,
+}
 
 pub struct Query;
 
-#[juniper::object(
-    Context = Context,
-)]
+#[juniper::object(Context = Context)]
 impl Query {
-    fn items(ctx: &Context) -> juniper::FieldResult<Vec<Item>> {
-        let item_map = ctx.item_map.read().unwrap();
-        let items = item_map.values().cloned().collect();
+    fn items(ctx: &Context, state: Option<ItemState>) -> juniper::FieldResult<Vec<Item>> {
+        let item_map = get_read_lock!(ctx.item_map);
+
+        let items = item_map
+            .values()
+            .filter(|&item| match state {
+                Some(ItemState::Doing) => !item.done,
+                Some(ItemState::Done) => item.done,
+                None => true,
+            })
+            .cloned()
+            .collect();
 
         Ok(items)
     }
@@ -36,30 +67,32 @@ impl Query {
 
 pub struct Mutation;
 
-#[juniper::object(
-    Context = Context,
-)]
+#[juniper::object(Context = Context)]
 impl Mutation {
-    fn createTodo(ctx: &Context, name: String) -> juniper::FieldResult<Item> {
-        let mut item_map = ctx.item_map.write().unwrap();
-        let id: String = item_map.len().to_string();
+    fn createItem(ctx: &Context, name: String) -> juniper::FieldResult<Item> {
+        let mut item_map = get_write_lock!(ctx.item_map);
 
-        let item = Item {
-            id,
-            name,
-            done: false
-        };
-
-        item_map.insert(item.id.to_string(), item.clone());
+        let id = item_map.len().to_string();
+        let done = false;
+        let item = Item { id, name, done };
+        item_map.insert(item.id.to_owned(), item.clone());
 
         Ok(item.clone())
     }
 
-    fn finishTodo(ctx: &Context, id: String) -> juniper::FieldResult<Item> {
-        let mut item_map = ctx.item_map.write().unwrap();
-        let mut item = item_map.get_mut(&id).unwrap();
+    fn deleteItem(ctx: &Context, id: String) -> juniper::FieldResult<Item> {
+        let mut item_map = get_write_lock!(ctx.item_map);
 
-        item.done = true;
+        let item = item_not_exist!(item_map.remove(&id));
+
+        Ok(item)
+    }
+
+    fn markItem(ctx: &Context, id: String, done: bool) -> juniper::FieldResult<Item> {
+        let mut item_map = get_write_lock!(ctx.item_map);
+
+        let mut item = item_not_exist!(item_map.get_mut(&id));
+        item.done = done;
 
         Ok(item.clone())
     }
@@ -67,6 +100,6 @@ impl Mutation {
 
 pub type Schema = juniper::RootNode<'static, Query, Mutation>;
 
-pub fn create_schema () -> Schema {
+pub fn create_schema() -> Schema {
     Schema::new(Query, Mutation)
 }
