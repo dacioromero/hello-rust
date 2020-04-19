@@ -8,10 +8,15 @@ services:
     environment:
       POSTGRES_PASSWORD: "postgres"
   server:
-    build: "."
+    build:
+      context: ".."
+      args:
+        PACKAGE: "graphql-server"
+    command: "graphql-server"
     depends_on:
       - "postgres"
     environment:
+      ADDR: "0.0.0.0:3000"
       DATABASE_URL: "postgres://postgres:postgres@postgres/postgres"
     ports:
       - "3000:3000"
