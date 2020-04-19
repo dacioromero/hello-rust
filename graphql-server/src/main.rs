@@ -1,8 +1,10 @@
 // https://github.com/graphql-rust/juniper/blob/47f7ffaa5b2c22c7ee3a3907cb4240bfd8056a70/juniper_hyper/examples/hyper_server.rs
-extern crate openssl;
 #[macro_use]
 extern crate diesel;
+#[macro_use]
+extern crate juniper;
 
+// TODO: Determine if making models and schema public is correct.
 mod graphql;
 pub mod models;
 pub mod schema;
@@ -12,9 +14,7 @@ use hyper::{
     service::{make_service_fn, service_fn},
     Body, Method, Response, Server, StatusCode,
 };
-use std::env;
-use std::net::SocketAddr;
-use std::sync::Arc;
+use std::{env, net::SocketAddr, sync::Arc};
 
 #[tokio::main]
 async fn main() {
