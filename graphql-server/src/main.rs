@@ -6,14 +6,14 @@ mod graphql;
 pub mod models;
 pub mod schema;
 
-use std::env;
-use std::sync::Arc;
-use std::net::SocketAddr;
+use dotenv::dotenv;
 use hyper::{
     service::{make_service_fn, service_fn},
     Body, Method, Response, Server, StatusCode,
 };
-use dotenv::dotenv;
+use std::env;
+use std::net::SocketAddr;
+use std::sync::Arc;
 
 #[tokio::main]
 async fn main() {
