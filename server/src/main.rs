@@ -1,4 +1,4 @@
-use actix_web::{get, Responder, HttpResponse, HttpServer, App};
+use actix_web::{get, App, HttpResponse, HttpServer, Responder};
 
 #[get("/")]
 async fn home() -> impl Responder {
@@ -10,11 +10,8 @@ async fn main() -> std::io::Result<()> {
     let bind = "0.0.0.0:3000";
     println!("Starting server on {}", bind);
 
-    HttpServer::new(|| {
-        App::new()
-            .service(home)
-    })
-    .bind(bind)?
-    .run()
-    .await
+    HttpServer::new(|| App::new().service(home))
+        .bind(bind)?
+        .run()
+        .await
 }
