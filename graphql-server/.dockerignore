@@ -1,1 +1,8 @@
-/target
+*
+
+# -- Whitelist --
+!Cargo.toml
+!Cargo.lock
+!src
+
+# -- Blacklist --

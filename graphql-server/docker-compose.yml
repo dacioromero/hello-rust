@@ -1,0 +1,17 @@
+version: "3"
+
+services:
+  postgres:
+    image: "postgres:12.2-alpine"
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_PASSWORD: "postgres"
+  server:
+    build: "."
+    depends_on:
+      - "postgres"
+    environment:
+      DATABASE_URL: "postgres://postgres:postgres@postgres/postgres"
+    ports:
+      - "3000:3000"

@@ -1,105 +1,105 @@
-use std::collections::HashMap;
-use std::sync::RwLock;
+use crate::models::*;
+use crate::schema;
+use diesel::*;
+use juniper::*;
 
-macro_rules! get_write_lock {
-    ($x:expr) => {
-        $x.write().expect("Failed to get write lock")
-    };
-}
+type PgConnectionManager = r2d2::ConnectionManager<pg::PgConnection>;
+type PgPool = r2d2::Pool<PgConnectionManager>;
+type PgPooledConnection = r2d2::PooledConnection<PgConnectionManager>;
 
-macro_rules! get_read_lock {
-    ($x:expr) => {
-        $x.read().expect("Failed to get read lock")
-    };
-}
+pub struct Context(PgPool);
 
-macro_rules! item_not_exist {
-    ($getter:expr) => {
-        $getter.expect("Item {} doesn't exist")
-    };
-}
-
-pub struct Context {
-    item_map: RwLock<HashMap<String, Item>>,
+impl Context {
+    pub fn connection(&self) -> PgPooledConnection {
+        self.0.get().expect("Failed to connect to pool")
+    }
 }
 
 impl juniper::Context for Context {}
 
-pub fn create_context() -> Context {
-    let item_map = RwLock::new(HashMap::new());
+pub fn create_context(database_url: &String) -> Context {
+    let manager = PgConnectionManager::new(database_url);
+    let pool = r2d2::Pool::builder()
+        .build(manager)
+        .expect("Failed to build pool");
 
-    Context { item_map }
+    Context(pool)
 }
-
-#[derive(juniper::GraphQLObject, Clone)]
-struct Item {
-    id: String,
-    name: String,
-    done: bool,
-}
-
-#[derive(juniper::GraphQLEnum)]
-enum ItemState {
-    Doing = 0,
-    Done = 1,
-}
-
 pub struct Query;
 
-#[juniper::object(Context = Context)]
+#[graphql_object(Context = Context)]
 impl Query {
-    fn items(ctx: &Context, state: Option<ItemState>) -> juniper::FieldResult<Vec<Item>> {
-        let item_map = get_read_lock!(ctx.item_map);
+    fn items(ctx: &Context, is_done: Option<bool>) -> juniper::FieldResult<Vec<Item>> {
+        use schema::items::dsl;
 
-        let items = item_map
-            .values()
-            .filter(|&item| match state {
-                Some(ItemState::Doing) => !item.done,
-                Some(ItemState::Done) => item.done,
-                None => true,
-            })
-            .cloned()
-            .collect();
+        let connection = ctx.connection();
+        let mut query = dsl::items.into_boxed();
 
-        Ok(items)
+        match is_done {
+            Some(d) => {
+                query = query.filter(dsl::done.eq(d));
+            }
+            None => {}
+        };
+
+        let result = query
+            .load::<Item>(&connection)
+            .expect("Error loading items");
+
+        Ok(result)
     }
 }
 
 pub struct Mutation;
 
-#[juniper::object(Context = Context)]
+#[graphql_object(Context = Context)]
 impl Mutation {
     fn createItem(ctx: &Context, name: String) -> juniper::FieldResult<Item> {
-        let mut item_map = get_write_lock!(ctx.item_map);
+        use schema::items::dsl;
 
-        let id = item_map.len().to_string();
-        let done = false;
-        let item = Item { id, name, done };
-        item_map.insert(item.id.to_owned(), item.clone());
+        let connection = ctx.connection();
 
-        Ok(item.clone())
+        let new_item = NewItem {
+            name: &name,
+            done: &false,
+        };
+
+        let result = diesel::insert_into(dsl::items)
+            .values(&new_item)
+            .get_result(&connection)
+            .expect("Error saving post");
+
+        Ok(result)
     }
 
-    fn deleteItem(ctx: &Context, id: String) -> juniper::FieldResult<Item> {
-        let mut item_map = get_write_lock!(ctx.item_map);
+    fn deleteItem(ctx: &Context, id: i32) -> juniper::FieldResult<Item> {
+        use schema::items::dsl;
 
-        let item = item_not_exist!(item_map.remove(&id));
+        let pool = ctx.connection();
 
-        Ok(item)
+        let result = diesel::delete(dsl::items.filter(dsl::id.eq(id)))
+            .get_result(&pool)
+            .expect("Error deleting post");
+
+        Ok(result)
     }
 
-    fn markItem(ctx: &Context, id: String, done: bool) -> juniper::FieldResult<Item> {
-        let mut item_map = get_write_lock!(ctx.item_map);
+    fn markItem(ctx: &Context, id: i32, done: bool) -> juniper::FieldResult<Item> {
+        use schema::items::dsl;
 
-        let mut item = item_not_exist!(item_map.get_mut(&id));
-        item.done = done;
+        let pool = ctx.connection();
 
-        Ok(item.clone())
+        let result = diesel::update(dsl::items.filter(dsl::id.eq(id)))
+            .set(dsl::done.eq(done))
+            .get_result(&pool)
+            .expect("Failed to update item");
+
+        Ok(result)
     }
 }
 
-pub type Schema = juniper::RootNode<'static, Query, Mutation>;
+pub type RootNode = juniper::RootNode<'static, Query, Mutation, EmptySubscription<Context>>;
 
-pub fn create_schema() -> Schema {
-    Schema::new(Query, Mutation)
+pub fn create_root_node() -> RootNode {
+    RootNode::new(Query, Mutation, EmptySubscription::new())
 }

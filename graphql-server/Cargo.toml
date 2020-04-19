@@ -7,6 +7,17 @@ edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-juniper = "0.14.2"
-rocket = "0.4.4"
-juniper_rocket = "0.5.2"
+hyper = "^0.13.5"
+futures = "^0.3.4"
+openssl = "^0.10.29"
+dotenv = "^0.15.0"
+[dependencies.tokio]
+version = "^0.2.18"
+features = ["macros"]
+[dependencies.juniper]
+git = "https://github.com/graphql-rust/juniper"
+[dependencies.juniper_hyper]
+git = "https://github.com/graphql-rust/juniper"
+[dependencies.diesel]
+version = "^1.4.4"
+features = ["postgres", "r2d2", "numeric"]
