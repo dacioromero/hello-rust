@@ -4,19 +4,19 @@ use crate::schema::items;
 pub struct Item {
     pub id: i32,
     pub name: String,
-    pub done: bool,
+    pub completed: bool,
 }
 
 #[derive(GraphQLInputObject, Insertable)]
 #[table_name = "items"]
 pub struct ItemCreateData {
     name: String,
-    done: Option<bool>,
+    completed: Option<bool>,
 }
 
 #[derive(GraphQLInputObject, AsChangeset)]
 #[table_name = "items"]
 pub struct ItemUpdateData {
     name: Option<String>,
-    done: Option<bool>,
+    completed: Option<bool>,
 }

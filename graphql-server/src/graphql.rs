@@ -36,7 +36,7 @@ pub fn create_context(database_url: &String) -> Context {
 pub struct ItemWhereInput {
     id: Option<ID>,
     name: Option<String>,
-    done: Option<bool>,
+    completed: Option<bool>,
 }
 
 pub struct Query;
@@ -71,8 +71,8 @@ impl Query {
                 query = query.filter(dsl::name.eq(name))
             }
 
-            if let Some(done) = w.done {
-                query = query.filter(dsl::done.eq(done))
+            if let Some(completed) = w.completed {
+                query = query.filter(dsl::completed.eq(completed))
             }
         }
 
