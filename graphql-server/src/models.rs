@@ -8,14 +8,14 @@ pub struct Item {
 }
 
 #[derive(GraphQLInputObject, Insertable)]
-#[table_name = "items"]
+#[diesel(table_name = items)]
 pub struct ItemCreateData {
     name: String,
     completed: Option<bool>,
 }
 
 #[derive(GraphQLInputObject, AsChangeset)]
-#[table_name = "items"]
+#[diesel(table_name = items)]
 pub struct ItemUpdateData {
     name: Option<String>,
     completed: Option<bool>,

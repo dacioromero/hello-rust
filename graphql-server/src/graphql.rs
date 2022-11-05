@@ -47,10 +47,10 @@ impl Query {
     fn item(ctx: &Context, id: ID) -> FieldResult<Item> {
         use schema::items::dsl;
 
-        let connection = ctx.connection()?;
+        let mut connection = ctx.connection()?;
         let result = dsl::items
             .filter(dsl::id.eq(id.parse::<i32>()?))
-            .get_result(&connection)?;
+            .get_result(&mut connection)?;
 
         Ok(result)
     }
@@ -59,7 +59,7 @@ impl Query {
     fn items(ctx: &Context, where_: Option<ItemWhereInput>) -> FieldResult<Vec<Item>> {
         use schema::items::dsl;
 
-        let connection = ctx.connection()?;
+        let mut connection = ctx.connection()?;
         let mut query = dsl::items.into_boxed();
 
         // TODO: Research a better pattern for this
@@ -77,7 +77,7 @@ impl Query {
             }
         }
 
-        let result = query.load(&connection)?;
+        let result = query.load(&mut connection)?;
 
         Ok(result)
     }
@@ -90,11 +90,11 @@ impl Mutation {
     fn create_item(ctx: &Context, data: ItemCreateData) -> FieldResult<Item> {
         use schema::items::dsl;
 
-        let connection = ctx.connection()?;
+        let mut connection = ctx.connection()?;
 
         let result = insert_into(dsl::items)
             .values(&data)
-            .get_result(&connection)?;
+            .get_result(&mut connection)?;
 
         Ok(result)
     }
@@ -102,10 +102,10 @@ impl Mutation {
     fn delete_item(ctx: &Context, id: ID) -> FieldResult<Item> {
         use schema::items::dsl;
 
-        let connection = ctx.connection()?;
+        let mut connection = ctx.connection()?;
 
         let result =
-            delete(dsl::items.filter(dsl::id.eq(id.parse::<i32>()?))).get_result(&connection)?;
+            delete(dsl::items.filter(dsl::id.eq(id.parse::<i32>()?))).get_result(&mut connection)?;
 
         Ok(result)
     }
@@ -113,11 +113,11 @@ impl Mutation {
     fn update_item(ctx: &Context, id: ID, data: ItemUpdateData) -> FieldResult<Item> {
         use schema::items::dsl;
 
-        let connection = ctx.connection()?;
+        let mut connection = ctx.connection()?;
 
         let result = update(dsl::items.filter(dsl::id.eq(id.parse::<i32>()?)))
             .set(&data)
-            .get_result(&connection)?;
+            .get_result(&mut connection)?;
 
         Ok(result)
     }

@@ -2,17 +2,17 @@
 name = "graphql-server"
 version = "0.1.0"
 authors = ["Dacio Romero <dacioromero@gmail.com>"]
-edition = "2018"
+edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-futures = "^0.3.4"
-openssl = "^0.10.29"
+futures = "^0.3.25"
+openssl = "^0.10.42"
 dotenv = "^0.15.0"
 [dependencies.hyper]
-version = "^0.14.7"
-features = ["server", "runtime", "http1"]
+version = "^0.14.22"
+features = ["server", "http1"]
 [dependencies.tokio]
 version = "^1.21.2"
 features = ["macros", "rt-multi-thread"]
@@ -21,5 +21,5 @@ git = "https://github.com/graphql-rust/juniper"
 [dependencies.juniper_hyper]
 git = "https://github.com/graphql-rust/juniper"
 [dependencies.diesel]
-version = "^1.4.4"
-features = ["postgres", "r2d2", "numeric"]
+version = "^2.0.2"
+features = ["postgres", "r2d2"]
