@@ -14,9 +14,9 @@ pub mod schema;
 use dotenv::dotenv;
 use hyper::{
     service::{make_service_fn, service_fn},
-    Body, Method, Response, Server, StatusCode,
+    Method, Response, Server, StatusCode,
 };
-use std::{env, net::SocketAddr, sync::Arc};
+use std::{convert::Infallible, env, net::SocketAddr, sync::Arc};
 
 #[tokio::main]
 async fn main() {
@@ -33,33 +33,33 @@ async fn main() {
 
     let new_service = make_service_fn(move |_| {
         let root_node = root_node.clone();
-        let context = context.clone();
+        let ctx = context.clone();
 
         async move {
-            Ok::<_, hyper::Error>(service_fn(move |request| {
+            Ok::<_, hyper::Error>(service_fn(move |req| {
                 let root_node = root_node.clone();
-                let context = context.clone();
+                let ctx = ctx.clone();
                 async move {
-                    match (request.method(), request.uri().path()) {
+                    Ok::<_, Infallible>(match (req.method(), req.uri().path()) {
                         (&Method::GET, "/") => juniper_hyper::graphiql("/graphql", None).await,
                         (&Method::GET, "/graphql") | (&Method::POST, "/graphql") => {
-                            juniper_hyper::graphql(root_node, context, request).await
+                            juniper_hyper::graphql(root_node, ctx, req).await
                         }
                         _ => {
-                            let mut response = Response::new(Body::empty());
+                            let mut response = Response::new(String::new());
                             *response.status_mut() = StatusCode::NOT_FOUND;
-                            Ok(response)
+                            response
                         }
-                    }
+                    })
                 }
             }))
         }
     });
 
     let server = Server::bind(&addr).serve(new_service);
-    println!("Listening on http://{}", addr);
+    println!("Listening on http://{addr}");
 
     if let Err(e) = server.await {
-        eprintln!("server error: {}", e)
+        eprintln!("server error: {e}")
     }
 }

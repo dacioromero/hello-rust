@@ -6,6 +6,7 @@ use diesel::{
     r2d2::{ConnectionManager, Pool, PoolError, PooledConnection},
     update, ExpressionMethods, QueryDsl, RunQueryDsl,
 };
+use juniper::EmptySubscription;
 use juniper::{FieldResult, ID};
 
 type PgConnectionManager = ConnectionManager<PgConnection>;
@@ -86,7 +87,7 @@ pub struct Mutation;
 
 #[graphql_object(Context = Context)]
 impl Mutation {
-    fn createItem(ctx: &Context, data: ItemCreateData) -> FieldResult<Item> {
+    fn create_item(ctx: &Context, data: ItemCreateData) -> FieldResult<Item> {
         use schema::items::dsl;
 
         let connection = ctx.connection()?;
@@ -98,7 +99,7 @@ impl Mutation {
         Ok(result)
     }
 
-    fn deleteItem(ctx: &Context, id: ID) -> FieldResult<Item> {
+    fn delete_item(ctx: &Context, id: ID) -> FieldResult<Item> {
         use schema::items::dsl;
 
         let connection = ctx.connection()?;
@@ -109,7 +110,7 @@ impl Mutation {
         Ok(result)
     }
 
-    fn updateItem(ctx: &Context, id: ID, data: ItemUpdateData) -> FieldResult<Item> {
+    fn update_item(ctx: &Context, id: ID, data: ItemUpdateData) -> FieldResult<Item> {
         use schema::items::dsl;
 
         let connection = ctx.connection()?;
@@ -122,13 +123,8 @@ impl Mutation {
     }
 }
 
-pub struct Subscription;
-
-#[graphql_object(Context = Context)]
-impl Subscription {}
-
-pub type RootNode = juniper::RootNode<'static, Query, Mutation, Subscription>;
+pub type RootNode = juniper::RootNode<'static, Query, Mutation, EmptySubscription<Context>>;
 
 pub fn create_root_node() -> RootNode {
-    RootNode::new(Query, Mutation, Subscription)
+    RootNode::new(Query, Mutation, EmptySubscription::<Context>::new())
 }
